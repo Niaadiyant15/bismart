@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Lookup</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+        }
+        .example {
+            margin-left: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Masukkan Data</h1>
+    <div class="container">
+        <form id="dataForm">
+            <label for="inputData">Masukkan Kode Jam, Kode Guru, dan Kode Kelas (format: kode jam kode guru kode kelas):</label><br>
+            <textarea id="inputData" rows="10" cols="30" placeholder="Contoh:&#10;1 1.1 1&#10;2 2.1 2" required></textarea>
+            <br><br>
+            <button type="submit">Tampilkan Data</button>
+        </form>
+
+        <div class="example">
+            <h3>Contoh Format Input</h3>
+            <p><strong>Format:</strong> kode jam kode guru kode kelas</p>
+            <p><strong>Contoh:</strong></p>
+            <pre>
+1 1.1 1   // Kode Jam 1, Kode Guru 1.1, Kelas X DKV
+2 2.1 2   // Kode Jam 2, Kode Guru 2.1, Kelas X ANM
+3 3.1 3   // Kode Jam 3, Kode Guru 3.1, Kelas X RPL
+            </pre>
+        </div>
+    </div>
+
+    <div id="result"></div>
+    <button id="downloadExcel" style="display:none;">Unduh Excel</button>
+
+    <script>
+        const dataGuru = {
+            "1.1": { "nama": "Sinta Dewi, S.Pd., M.Kom.", "mapel": "Penulisan Naskah Podcast GENAP 24/25" },
+            "2.1": { "nama": "Rizam Nuruzzaman, M.Pd.", "mapel": "Produk Kreatif dan Kewirausahaan 2 GENAP 24/25" },
+            "3.1": { "nama": "Budi Arya D, S.Kom", "mapel": "Editing Dasar GENAP 24/25" },
+            "3.2": { "nama": "Budi Arya D, S.Kom", "mapel": "Dasar Tata Suara GENAP 24/25" },
+            "3.3": { "nama": "Budi Arya D, S.Kom", "mapel": "Tata Suara GENAP 24/25" },
+            "3.4": { "nama": "Budi Arya D, S.Kom", "mapel": "Editing Audio Video TV GENAP 24/25" },
+            "3.5": { "nama": "Budi Arya D, S.Kom", "mapel": "Teknik Pengolahan Audio Video (Editing) (Bimbingan PW) GENAP 24/25" },
+            "3.6": { "nama": "Budi Arya D, S.Kom", "mapel": "Digital Processing 3 (Visual effect Studi Kasus UKK) GENAP 24/25" },
+            "3.7": { "nama": "Budi Arya D, S.Kom", "mapel": "Editing Audio dan Video 2 (Studi Kasus UKK) GENAP 24/25" },
+            "3.8": { "nama": "Budi Arya D, S.Kom", "mapel": "Editing Audio dan Video 2 (Produksi PW) GENAP 24/25" },
+            "4.1": { "nama": "Ahmad Ridhwan Hanafi, Lc.", "mapel": "Pendidikan Agama dan Budi Pekerti GENAP 24/25" },
+            "4.2": { "nama": "Ahmad Ridhwan Hanafi, Lc.", "mapel": "Pendidikan Agama dan Budi Pekerti GENAP 24/25" },
+            "4.3": { "nama": "Ahmad Ridhwan Hanafi, Lc.", "mapel": "Pendidikan Agama dan Budi Pekerti GENAP 24/25" },
+            "5.1": { "nama": "Caesar M. Miraj Leichira, M.Ikom.", "mapel": "Dasar Fotografi dan Tata Kamera GENAP 24/25" },
+            "5.2": { "nama": "Caesar M. Miraj Leichira, M.Ikom.", "mapel": "Penyutradaraan TV GENAP 24/25" },
+            "5.3": { "nama": "Caesar M. Miraj Leichira, M.Ikom.", "mapel": "Desain Brief GENAP 24/25" },
+            "5.4": { "nama": "Caesar M. Miraj Leichira, M.Ikom.", "mapel": "Editorial (Storyboarding, rekam dialog, animating) GENAP 24/25" },
+            "5.5": { "nama": "Caesar M. Miraj Leichira, M.Ikom.", "mapel": "Bimbingan Produksi PW (pengambilan gambar) GENAP 24/25" },
+            "5.6": { "nama": "Caesar M. Miraj Leichira, M.Ikom.", "mapel": "Quality Control Produksi UKK Animasi GENAP 24/25" },
+            "6.1": { "nama": "M. Iqbal Akbar, S.T.", "mapel": "Basis Data 1 GENAP 24/25" },
+            "6.2": { "nama": "M. Iqbal Akbar, S.T.", "mapel": "Pemrograman Web GENAP 24/25" },
+            "6.3": { "nama": "M. Iqbal Akbar, S.T.", "mapel": "Orientasi Dasar Pengembangan Perangkat Lunak GENAP 24/25" },
+            "6.4": { "nama": "M. Iqbal Akbar, S.T.", "mapel": "Desain Multimedia Interaktif 2 GENAP 24/25" },
+            "6.5": { "nama": "M. Iqbal Akbar, S.T.", "mapel": "Quality Control Produksi UKK MM GENAP 24/25" },
+            "6.6": { "nama": "M. Iqbal Akbar, S.T.", "mapel": "Basis Data 3 GENAP 24/25" },
+            "7.1": { "nama": "Dra. P. Ambarwati", "mapel": "Bimbingan Karier GENAP 24/25" },
+            "7.2": { "nama": "Dra. P. Ambarwati", "mapel": "Bimbingan Karier GENAP 24/25" },
+            "8.1": { "nama": "Estu Hergamita, S.Ds.", "mapel": "Komposisi Tipografi GENAP 24/25" },
+            "8.2": { "nama": "Estu Hergamita, S.Ds.", "mapel": "Prinsip Dasar Desain dan Komunikasi GENAP 24/25" },
+            "8.3": { "nama": "Estu Hergamita, S.Ds.", "mapel": "Teknik Animasi 2D 3 GENAP 24/25" },
+            "8.4": { "nama": "Estu Hergamita, S.Ds.", "mapel": "Quality Control Produksi UKK MM GENAP 24/ 25" },
+            "8.5": { "nama": "Estu Hergamita, S.Ds.", "mapel": "Aplikasi Teknologi Industri GENAP 24/25" },
+            "8.6": { "nama": "Estu Hergamita, S.Ds.", "mapel": "Visual 2D 2 GENAP 24/25" },
+            "9.1": { "nama": "Nurul Hikmah, S.Pd", "mapel": "Bahasa Indonesia GENAP 24/25" },
+            "9.2": { "nama": "Nurul Hikmah, S.Pd", "mapel": "Bahasa Indonesia GENAP 24/25" },
+            "10.1": { "nama": "Syafira Mulya EP, S.Pd", "mapel": "Proses Bisnis Bidang Animasi GENAP 24/25" },
+            "10.2": { "nama": "Syafira Mulya EP, S.Pd", "mapel": "Aspek Legal Bidang Animasi GENAP 24/25" },
+            "10.3": { "nama": "Syafira Mulya EP, S.Pd", "mapel": "Quality Control Produksi Animasi GENAP 24/25" },
+            "10.4": { "nama": "Syafira Mulya EP, S.Pd", "mapel": "Prototype Produksi GENAP 24/25" },
+            "10.5": { "nama": "Syafira Mulya EP, S.Pd", "mapel": "Dasar Tata Artistik GENAP 24/25" },
+            "10.6": { "nama": "Syafira Mulya EP, S.Pd", "mapel": "Proses Bisnis Bidang DKV GENAP 24/25" },
+            "11.1": { "nama": "Khusnul Umaroh, S.Pd", "mapel": "Bimbingan Karier GENAP 24/25" },
+            "11.2": { "nama": "Khusnul Umaroh, S.Pd", "mapel": "Bimbingan Karier GENAP 24/25" },
+            "12.1": { "nama": "Resa Miswal Nugraha, S.Ag.", "mapel": "Pendidikan Agama dan Budi Pekerti GENAP 24/25" },
+            "12.2": { "nama": "Resa Miswal Nugraha, S.Ag.", "mapel": "Pendidikan Agama dan Budi Pekerti GENAP 24/25" },
+            "12.3": { "nama": "Resa Miswal Nugraha, S.Ag.", "mapel": "Pendidikan Agama dan Budi Pekerti GENAP 24/25" },
+            "13.1": { "nama": "Hizbul Maulana, S.Sos.", "mapel": "Teknik Dasar Proses Produksi Broadcasting dan Perfilman GENAP 24/25" },
+            "13.2": { "nama": "Hizbul Maulana, S.Sos.", "mapel": "Fotografi Dasar GENAP 24/25" },
+            "13.3": { "nama": "Hizbul Maulana, S.Sos.", "mapel": "Manajemen Produksi TV GENAP 24/25" },
+            "13.4": { "nama": "Hizbul Maulana, S.Sos.", "mapel": "Penulisan Naskah TV GENAP 24/25" },
+            "13.5": { "nama": "Hizbul Maulana, S.Sos.", "mapel": "Tata Kamera dan Tata Cahaya TV GENAP 24/25" },
+            "13.6": { "nama": "Hizbul Maulana, S.Sos.", "mapel": "Penulisan Konsep dan Naskah PW GENAP 24/25" },
+            "14.1": { "nama": "Sapdal Eka Tianty, S.Kom.", "mapel": "Informatika GENAP 24/25" },
+            "14.2": { "nama": "Sapdal Eka Tianty, S.Kom.", "mapel": "Pemrograman Terstruktur GENAP 24/25" },
+            "14.3": { "nama": "Sapdal Eka Tianty, S.Kom.", "mapel": "Perencanaan dan Pengalamatan Jaringan GENAP 24/25" },
+            "14.4": { "nama": "Sap dal Eka Tianty, S.Kom.", "mapel": "Pemasangan dan Konfigurasi Perangkat Jaringan GENAP 24/25" },
+            "14.5": { "nama": "Sapdal Eka Tianty, S.Kom.", "mapel": "Administrasi Sistem Jaringan GENAP 24/25" },
+            "14.6": { "nama": "Sapdal Eka Tianty, S.Kom.", "mapel": "Teknologi Jaringan Kabel dan Nirkabel GENAP 24/25" },
+            "15.1": { "nama": "Nia Adiyanti, S.Kom.", "mapel": "Informatika GENAP 24/25" },
+            "15.2": { "nama": "Nia Adiyanti, S.Kom.", "mapel": "Pemrograman Web GENAP 24/25" },
+            "15.3": { "nama": "Nia Adiyanti, S.Kom.", "mapel": "Profesi dan Kewirausahaan di Bidang Pengembangan Perangkat Lunak GENAP 24/25" },
+            "15.4": { "nama": "Nia Adiyanti, S.Kom.", "mapel": "Pemodelan Berorientasi Obyek GENAP 24/25" },
+            "15.5": { "nama": "Nia Adiyanti, S.Kom.", "mapel": "Basis Data 2 GENAP 24/25" },
+            "16.1": { "nama": "Santosa W, S.T, M.Kom", "mapel": "Pemrograman Perangkat Bergerak GENAP 24/25" },
+            "16.2": { "nama": "Santosa W, S.T, M.Kom", "mapel": "Quality Control Produksi UKK RPL GENAP 24/25" },
+            "16.3": { "nama": "Santosa W, S.T, M.Kom", "mapel": "Pemrograman Berorientasi Objek GENAP 24/25" },
+            "16.4": { "nama": "Santosa W, S.T, M.Kom", "mapel": "Pemrograman Perangkat Bergerak 2 GENAP 24/25" },
+            "17.1": { "nama": "Edi Junaedi, S.Mat.", "mapel": "Matematika GENAP 24/25" },
+            "17.2": { "nama": "Edi Junaedi, S.Mat.", "mapel": "Matematika GENAP 24/25" },
+            "17.3": { "nama": "Edi Junaedi, S.Mat.", "mapel": "Matematika GENAP 24/25" },
+            "18.1": { "nama": "Cecep M. Tholib, A.Md.", "mapel": "Cerita Visual GENAP 24/25" },
+            "18.2": { "nama": "Cecep M. Tholib, A.Md.", "mapel": "Sketsa dan Ilustrasi GENAP 24/25" },
+            "18.3": { "nama": "Cecep M. Tholib, A.Md.", "mapel": "Gerak 2D GENAP 24/25" },
+            "18.4": { "nama": "Cecep M. Tholib, A.Md.", "mapel": "Animasi 2D 3 GENAP 24/25" },
+            "19.1": { "nama": "Dicky Wibowo, S.Pd", "mapel": "Pendidikan Jasmani GENAP 24/25" },
+            "19.2": { "nama": "Dicky Wibowo, S.Pd", "mapel": "Pendidikan Jasmani GENAP 24/25" },
+            "20.1": { "nama": "Albiansyah, M.Pd", "mapel": "Bahasa Inggris GENAP 24/25" },
+            "20.2": { "nama": "Albiansyah, M.Pd", "mapel": "Bahasa Inggris GENAP 24/25" },
+            "20.3": { "nama": "Albiansyah, M.Pd", "mapel": "Bahasa Inggris GENAP 24/25" },
+            "21.1": { "nama": "Misbah, S.Sos", "mapel": "Pendidikan Agama dan Budi Pekerti GENAP 24/25" },
+            "21.2": { "nama": "Misbah, S.Sos", "mapel": "Pendidikan Agama dan Budi Pekerti GENAP 24/25" },
+            "21.3": { "nama": "Misbah, S.Sos", "mapel": "Pendidikan Agama dan Budi Pekerti GENAP 24/25" },
+            "22.1": { "nama": "Nindya Novianti, S.Pd", "mapel": "Matematika GENAP 24/25" },
+            "22.2": { "nama": "Nindya Novianti, S.Pd", "mapel": "Matematika GENAP 24/25" },
+            "22.3": { "nama": "Nindya Novianti, S.Pd", "mapel": "Projek IPAS GENAP 24/25" },
+            "23.1": { "nama": "Mohammad Hasan Al Khafid, S.Tr.Anim", "mapel": "Dasar Pergerakan Buatan GENAP 24/25" },
+            "23.2": { "nama": "Mohammad Hasan Al Khafid, S.Tr.Anim", "mapel": "Visual 3D GENAP 24/25" },
+            "23.3": { "nama": "Mohammad Hasan Al Khafid, S.Tr.Anim", "mapel": "Teknik Animasi 3D 3 GENAP 24/25" },
+            "23.4": { "nama": "Mohammad Hasan Al Khafid, S.Tr.Anim", "mapel": "Animasi 3D 3 GENAP 24/25" },
+            "25.1": { "nama": "Yeni Siti Nurasih, S.Pd", "mapel": "Matematika GENAP 24/25" },
+            "25.2": { "nama": "Yeni Siti Nurasih, S.Pd", "mapel": "Matematika GENAP 24/25" },
+            "25.3": { "nama": "Yeni Siti Nurasih, S.Pd", "mapel": "Matematika GENAP 24/25" },
+            "26.1": { "nama": "Tri Mulyanto, S.Pd.", "mapel": "Bahasa Inggris GENAP 24/25" },
+            "26.2": { "nama": "Tri Mulyanto, S.Pd.", "mapel": "Bahasa Inggris GENAP 24/25" },
+            "26.3": { "nama": "Tri Mulyanto, S.Pd.", "mapel": "Bahasa Inggris GENAP 24/25" },
+            "27.1": { "nama": "Didit Maulana, M.Pd.", "mapel": "Bahasa Indonesia GENAP 24/25" },
+            "27.2": { "nama": "Didit Maulana, M.Pd.", "mapel": "Bahasa Indonesia GENAP 24/25" },
+            "27.3": { "nama": "Didit Maulana, M.Pd.", "mapel": "Bahasa Indonesia GENAP 24/25" },
+            "28.1": { "nama": "Muhammad Rifqi Gunawan, S.H.", "mapel": "Pendidikan Pancasila GENAP 24/25" },
+            "28.2": { "nama": "Muhammad Rifqi Gunawan, S.H.", "mapel": "Pendidikan Pancasila GENAP 24/25" },
+            "30.1": { "nama": "Faqih S. Jiyad, S.Tr.Kom.", "mapel": "Proses Bisnis Pengembangan Gim GENAP 24/25" },
+            "30.2": { "nama": "Faqih S. Jiyad, S.Tr.Kom.", "mapel": "Proses Bisnis Pengembangan Perangkat Lunak GENAP 24/25" },
+            "30.3": { "nama": "Faqih S. Jiyad, S.Tr.Kom.", "mapel": "Pemodelan Gim GENAP 24/25" },
+            "30.4": { "nama": "Faqih S. Jiyad, S.Tr.Kom.", "mapel": "Desain Grafis Percetakan 2 GENAP 24/25" },
+            "30.5": { "nama": "Faqih S. Jiyad, S.Tr.Kom.", "mapel": "Karya Desain GENAP 24/25" },
+            "30.6": { "nama": "Faqih S. Jiyad, S.Tr.Kom.", "mapel": "Profesi dan Kewirausahaan di Bidang Pengembangan Gim GENAP 24/25" },
+            "31.1": { "nama": "Amri Aziz Multazam, S.Kom.", "mapel": "Administrasi Sistem Jaringan GENAP 24/25" },
+            "31.2": { "nama": "Amri Aziz Multazam, S.Kom.", "mapel": "Keamanan Jaringan GENAP 24/25" },
+            "32.1": { "nama": "J. Budi Purnomo, S.T.", "mapel": "Teknologi Jaringan Berbasis Luas GENAP 24/25" },
+            "32.2": { "nama": "J. Budi Purnomo, S.T.", "mapel": "Administrasi Infrastruktur Jaringan GENAP 24/25" },
+            "32.3": { "nama": "J. Budi Purnomo, S.T.", "mapel": "Quality Control Produksi UKK GENAP 24/25" },
+            "32.4": { "nama": "J. Budi Purnomo, S.T.", "mapel": "Pemasangan dan Konfigurasi Perangkat Jaringan GENAP 24/25" },
+            "32.5": { "nama": "J. Budi Purnomo, S.T.", "mapel": "Administrasi Sistem Jaringan 2 GENAP 24/25" },
+            "33.1": { "nama": "Sagita, S.Sn.", "mapel": "Komputer Grafis GENAP 24/25" },
+            "33.2": { "nama": "Sagita, S.Sn.", "mapel": "Perangkat Lunak Desain GENAP 24/25" },
+            "33.3": { "nama": "Sagita, S.Sn.", "mapel": "Komputer Grafis dan Multimedia GENAP 24/25" },
+            "33.4": { "nama": "Sagita, S.Sn.", "mapel": "Proses Produksi Desain GENAP 24/25" },
+            "34.1": { "nama": "Salsabila Putri Anggraini, S.Pd.", "mapel": "Bahasa Indonesia GENAP 24/25" },
+            "34.2": { "nama": "Salsabila Putri Anggraini, S.Pd.", "mapel": "Bahasa Indonesia GENAP 24/25" },
+            "35.1": { "nama": "Mohammad Daffa Fadila, S.Pd.", "mapel": "Projek Kreatif dan Kewirausahaan GENAP 24/25" },
+            "35.2": { "nama": "Mohammad Daffa Fadila, S.Pd.", "mapel": "Pembuatan laporan Project Work GENAP 24/25" },
+            "36.1": { "nama": "Purwo Santoso, S.Kom.", "mapel": "Pemrograman Web GENAP 24/25" },
+            "36.2": { "nama": "Purwo Santoso, S.Kom.", "mapel": "Pemrograman Web 2 GENAP 24/25" },
+            "36.3": { "nama": "Purwo Santoso, S.Kom.", "mapel": "Pemrograman Berbasis Teks dan Grafis GENAP 24/25" },
+            "36.4": { "nama": "Purwo Santoso, S.Kom.", "mapel": "Pemrograman Web 3 GENAP 24/25" },
+            "36.5": { "nama": "Purwo Santoso, S.Kom.", "mapel": "Pemrograman Web Dinamis (Web E-Commerce) GENAP 24/25" }
+        };
+
+        const jamData = {
+            "1": { "jamMulai": "7.30", "jamSelesai": "8.15" },
+            "2": { "jamMulai": "8.15", "jamSelesai": "9.00" },
+            "3": { "jamMulai": "9.00", "jamSelesai": "9.45" },
+            "4": { "jamMulai": "10.00", "jamSelesai": "10.45" },
+            "5": { "jamMulai": "10.45", "jamSelesai": "11.30" },
+            "6": { "jamMulai": "11.30", "jamSelesai": "12.15" },
+            "7": { "jamMulai": "13.00", "jamSelesai": "13.45" },
+            "8": { "jamMulai": "13.45", "jamSelesai": "14.30" },
+            "9": { "jam Mulai": "14.30", "jamSelesai": "15.15" },
+            "10": { "jamMulai": "15.15", "jamSelesai": "16.00" }
+        };
+
+        const dataKelas = {
+            "1": "X DKV",
+            "2": "X TKJ",
+            "3": "X RPL",
+            "4": "X ANM",
+            "5": "X BC",
+            "6": "X GIM",
+            "7": "XI DKV",
+            "8": "XI TKJ",
+            "9": "XI RPL",
+            "10": "XI ANM",
+            "11": "XI BC",
+            "12": "XII MM 1",
+            "13": "XII MM 2",
+            "14": "XII TKJ",
+            "15": "XII RPL",
+            "16": "XII ANM",
+            "17": "XII BC"
+        };
+
+        document.getElementById('dataForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const inputData = document.getElementById('inputData').value.trim().split('\n');
+            const resultDiv = document.getElementById('result');
+            const summary = {};
+
+            inputData.forEach(line => {
+                const [kodeJam, kodeGuru, kodeKelas] = line.split(' ').map(item => item.trim());
+                const guruInfo = dataGuru[kodeGuru];
+                const kelas = dataKelas[kodeKelas];
+                const jamInfo = jamData[kodeJam];
+                const hari = "Senin"; // Misalkan hari tetap Senin untuk contoh ini
+
+                if (guruInfo && kelas && jamInfo) {
+                    const key = `${kodeGuru}-${kodeKelas}`;
+                    if (!summary[key]) {
+                        summary[key] = {
+                            kelas: kelas,
+                            mapel: guruInfo.mapel,
+                            nama: guruInfo.nama,
+                            hari: hari,
+                            jamMulai: jamInfo.jamMulai,
+                            jamSelesai: jamInfo.jamSelesai
+                        };
+                    } else {
+                        // Update jamSelesai jika jam baru lebih besar
+                        if (jamInfo.jamSelesai > summary[key].jamSelesai) {
+                            summary[key].jamSelesai = jamInfo.jamSelesai;
+                        }
+                    }
+                } else {
+                    alert(`Data tidak valid untuk kode: ${line}`);
+                }
+            });
+
+            let outputHTML = `
+                <h2>Data yang Dimasukkan</h2>
+                <table>
+                    <tr>
+                        <th>No</th>
+                        <th>NAMA KELAS</th>
+                        <th>NAMA MAPEL</th>
+                        <th>NAMA USER</th>
+                        <th>HARI</th>
+                        <th>JAM MULAI</th>
+                        <th>JAM SELESAI</th>
+                    </tr>
+            `;
+            let no = 1;
+
+            for (const key in summary) {
+                const { kelas, mapel, nama, hari, jamMulai, jamSelesai } = summary[key];
+                outputHTML += `
+                    <tr>
+                        <td>${no}</td>
+                        <td>${kelas}</td>
+                        <td>${mapel}</td>
+                        <td>${nama}</td>
+                        <td>${hari}</td>
+                        <td>${jamMulai}</td>
+                        <td>${jamSelesai}</td>
+                    </tr>
+                `;
+                no++;
+            }
+
+            outputHTML += `</table>`;
+            resultDiv.innerHTML = outputHTML;
+            resultDiv.style.display = 'block';
+            document.getElementById('downloadExcel').style.display = 'block';
+            document.getElementById('downloadExcel').onclick = function() {
+                downloadExcel(Object.values(summary));
+            };
+        });
+
+        function downloadExcel(summaryData) {
+            const excelData = summaryData.map(item => ({
+                "Nama Kelas": item.kelas,
+                "Nama Mapel": item.mapel,
+                "Nama User": item.nama,
+                "Hari": item.hari,
+                "Jam Mulai": item.jamMulai,
+                "Jam Selesai": item.jamSelesai
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
+            XLSX.writeFile(workbook, 'data_output.xlsx');
+        }
+    </script>
+</body
